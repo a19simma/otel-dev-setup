@@ -1,0 +1,112 @@
+version: "3"
+services:
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"    
+    volumes:
+      - ./prometheus.yml:/prometheus/prometheus.yml
+    command: 
+      - --enable-feature=otlp-write-receiver
+      - --web.enable-remote-write-receiver
+      - --enable-feature=exemplar-storage
+
+  grafana:
+    image: grafana/grafana
+    volumes:
+        - ./datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
+    ports:
+      - "3000:3000"
+
+  tempo:
+    image: grafana/tempo:latest
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./tempo.yaml:/etc/tempo.yaml
+    ports:
+      - "3200:3200"   # tempo
+      - "9095:9095" # tempo grpc
+      - "4317:4317"  # otlp grpc
+      - "4318:4318"  # otlp http
+
+  minio:
+    image: minio/minio
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        mkdir -p /data/loki-data && \
+        mkdir -p /data/loki-ruler &&
+        minio server /data
+    environment:
+      - MINIO_ROOT_USER=loki
+      - MINIO_ROOT_PASSWORD=supersecret
+      - MINIO_PROMETHEUS_AUTH_TYPE=public
+      - MINIO_UPDATE=off
+    ports:
+      - "9000:9000"
+  
+  promtail:
+    image: grafana/promtail
+    volumes:
+      - ./promtail.yaml:/etc/promtail/promtail.yaml
+    ports:
+      - 9080
+    command: -config.file=/etc/promtail/promtail.yaml
+
+  loki-gateway:
+    image: nginx:1.19
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - "8080:80"
+      - "3100"
+
+  loki-read:
+    image: grafana/loki
+    volumes:
+      - ./loki.yaml:/etc/loki/loki.yaml
+      - ./rules.yaml:/loki/rules.yaml:ro
+    ports:
+      - "3100"
+      - "7946"
+    command: "-config.file=/etc/loki/loki.yaml -target=read"
+    restart: always
+
+
+  loki-write:
+    image: grafana/loki
+    volumes:
+      - ./loki.yaml:/etc/loki/loki.yaml
+    ports:
+      - "3100"
+      - "7946"
+    command: "-config.file=/etc/loki/loki.yaml -target=write"
+    restart: always
+
+
+  loki-backend:
+    image: grafana/loki
+    volumes:
+      - ./loki.yaml:/etc/loki/loki.yaml
+    ports:
+      - "3100"
+      - "7946"
+    command: "-config.file=/etc/loki/loki.yaml -target=backend -legacy-read-mode=false"
+    restart: always
+
+  # alertmanager to enable receiving alerts
+  # alertmanager:
+  #   image: prom/alertmanager:v0.23.0
+  #   restart: unless-stopped
+  #   ports:
+  #     - "9093:9093"
+  #   volumes:
+  #     - "./config:/config"
+  #   command: --config.file=/config/alertmanager.yml --log.level=debug
+
