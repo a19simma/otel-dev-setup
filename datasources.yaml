@@ -33,11 +33,11 @@ datasources:
   jsonData:
     httpHeaderName1: "X-Scope-OrgID"
   secureJsonData:
-    httpHeaderValue1: "docker"
+    httpHeaderValue1: "tenant1"
   editable: false
   isDefault: false
   access: proxy
   type: loki
   uid: loki
-  url: http://loki-gateway
+  url: http://gateway:3100
   version: 1
