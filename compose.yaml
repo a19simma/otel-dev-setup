@@ -104,6 +104,8 @@ services:
     volumes:
       - ./promtail-local-config.yaml:/etc/promtail/config.yaml:ro
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./dotnet/logs:/var/logs/dotnet
+      - ./go/logs:/var/logs/go
     command: -config.file=/etc/promtail/config.yaml
     depends_on:
       - gateway

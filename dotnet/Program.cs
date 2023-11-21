@@ -6,12 +6,18 @@ using Microsoft.AspNetCore.Mvc;
 using MudBlazor.Services;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
+using Serilog;
+using Serilog.Formatting.Compact;
+
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.File(new CompactJsonFormatter(),"./logs/log.txt", rollingInterval: RollingInterval.Hour)
+    .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddHttpClient();
 StaticWebAssetsLoader.UseStaticWebAssets(builder.Environment, builder.Configuration);
 builder.Logging.ClearProviders();
-builder.Logging.AddJsonConsole();
+builder.Host.UseSerilog();
 
 var greeterMeter = new Meter("OtPrGrYa.Example", "1.0.0");
 var countGreetings = greeterMeter.CreateCounter<int>("greetings.count", description: "Counts the number of greetings");
