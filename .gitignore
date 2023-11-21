@@ -1,6 +1,7 @@
 .data
 dotnet/bin
 dotnet/obj
-dotnet/logs/*
 dotnet/.idea
-dotnet/**
+dotnet/logs/*
+
+!dotnet/logs/.gitkeep
